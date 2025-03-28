@@ -2,17 +2,9 @@
 
 Create signed release metadata files for ToDesktop Installer.
 
-## Installation
+## Prerequisites
 
-```bash
-npm install @todesktop/create-release-metadata
-# or
-yarn add @todesktop/create-release-metadata
-# or
-pnpm add @todesktop/create-release-metadata
-```
-
-## Install minisign (required)
+### Install minisign (required)
 
 This tool requires the native minisign command to generate keys and sign files:
 
@@ -30,7 +22,7 @@ apt install minisign
 # Download from https://jedisct1.github.io/minisign/
 ```
 
-## Generate signing key pair
+### Generate signing key pair with minisign
 
 Generate a new signing key pair using minisign:
 

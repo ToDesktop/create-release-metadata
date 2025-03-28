@@ -4,6 +4,7 @@ import * as fileUtils from "./file-utils.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { EventEmitter } from "node:events";
+import { ChildProcess } from "node:child_process";
 
 // Define a basic interface for our mocked process
 interface BasicMockProcess {
@@ -32,7 +33,8 @@ vi.mock("node:child_process", () => {
 				emitter.emit("close", 0);
 			}, 0);
 
-			return emitter;
+			// Type assertion to satisfy TypeScript
+			return emitter as unknown as ChildProcess;
 		}),
 	};
 });
@@ -195,7 +197,8 @@ describe("createReleaseMetadata", () => {
 				emitter.emit("close", 1);
 			}, 0);
 
-			return emitter;
+			// Type assertion to satisfy TypeScript
+			return emitter as unknown as ChildProcess;
 		});
 
 		await expect(
