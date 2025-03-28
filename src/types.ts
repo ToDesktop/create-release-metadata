@@ -31,6 +31,8 @@ export interface CreateMetadataOptions {
 	appVersion?: string;
 	baseUrl?: string;
 	platform?: "mac" | "win" | "linux";
+	password?: string;
+	verbose?: boolean;
 }
 
 export interface SignOptions {

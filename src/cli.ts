@@ -45,6 +45,8 @@ interface CLIOptions {
 	updaterVersion?: string;
 	platform?: string;
 	installMinisign?: boolean;
+	password?: string;
+	verbose?: boolean;
 }
 
 program
@@ -81,6 +83,11 @@ program
 		"mac",
 	)
 	.option("--install-minisign", "Show instructions to install minisign")
+	.option(
+		"--password <password>",
+		"Password for the minisign secret key (if not provided, you'll be prompted interactively)",
+	)
+	.option("--verbose", "Show detailed progress information during execution")
 	.action(async (files: string[], options: CLIOptions) => {
 		try {
 			// Check if minisign is installed
@@ -141,6 +148,8 @@ program
 				baseUrl: options.baseUrl,
 				platform: options.platform as "mac" | "win" | "linux",
 				autoUpdaterCompat: Boolean(options.autoUpdaterCompat),
+				password: options.password,
+				verbose: Boolean(options.verbose),
 			});
 
 			console.log(`Successfully created metadata at ${result}`);

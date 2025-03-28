@@ -65,7 +65,21 @@ npx @todesktop/create-release-metadata \
   --auto-updater-compat \
   --release-notes "What's new in this release:\n- Feature A\n- Bug fix B" \
   MyApp-1.2.3-arm64.zip MyApp-1.2.3-x64.zip
+
+# Provide password for the minisign key (for automation)
+npx @todesktop/create-release-metadata \
+  --secret-key minisign.key \
+  --password "my-secure-key-password" \
+  MyApp-1.2.3-arm64.zip MyApp-1.2.3-x64.zip
+
+# Show detailed progress information
+npx @todesktop/create-release-metadata \
+  --secret-key minisign.key \
+  --verbose \
+  MyApp-1.2.3-arm64.zip MyApp-1.2.3-x64.zip
 ```
+
+If you don't provide a password via the `--password` option, the tool will allow you to enter it interactively when minisign prompts for it.
 
 ## Verifying signatures
 
@@ -98,6 +112,10 @@ async function createRelease() {
 		releaseNotes: "What's new in this release:\n- Feature A\n- Bug fix B",
 		autoUpdaterCompat: true,
 		baseUrl: "https://example.com/downloads",
+		// Optional: provide password for the minisign key
+		password: "my-secure-key-password",
+		// Optional: show detailed progress information
+		verbose: true,
 	});
 
 	console.log(`Created manifest at ${manifestPath}`);
@@ -140,6 +158,8 @@ releaseNotes: |
 | `--updater-version <version>` | `updaterVersion`    | Version of the updater                                          |
 | `--platform <platform>`       | `platform`          | Platform to create metadata for (mac, win, linux)               |
 | `--output-dir <path>`         | `outputDir`         | Directory where metadata files will be written                  |
+| `--password <password>`       | `password`          | Password for the minisign secret key (optional)                 |
+| `--verbose`                   | `verbose`           | Show detailed progress information during execution             |
 | `--install-minisign`          | N/A                 | Show instructions for installing minisign                       |
 
 ## License

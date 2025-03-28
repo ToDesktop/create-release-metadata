@@ -3,17 +3,40 @@ import { createReleaseMetadata } from "./manifest.js";
 import * as fileUtils from "./file-utils.js";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { EventEmitter } from "node:events";
+
+// Define a basic interface for our mocked process
+interface BasicMockProcess {
+	stdin: {
+		write: ReturnType<typeof vi.fn>;
+		end: ReturnType<typeof vi.fn>;
+	};
+}
 
 // Mock dependencies
 vi.mock("./file-utils.js");
 vi.mock("node:fs/promises");
-vi.mock("node:child_process");
-vi.mock("node:util", () => ({
-	promisify: vi.fn().mockImplementation(() => {
-		// Return a mock async function that resolves
-		return vi.fn().mockResolvedValue({ stdout: "", stderr: "" });
-	}),
-}));
+vi.mock("node:child_process", () => {
+	return {
+		spawn: vi.fn().mockImplementation(() => {
+			const emitter = new EventEmitter() as EventEmitter & BasicMockProcess;
+
+			// Add stdin for password input tests
+			emitter.stdin = {
+				write: vi.fn(),
+				end: vi.fn(),
+			};
+
+			// Simulate process completion in the next event loop tick
+			setTimeout(() => {
+				emitter.emit("close", 0);
+			}, 0);
+
+			return emitter;
+		}),
+	};
+});
+
 vi.mock("yaml", () => ({
 	stringify: vi.fn().mockReturnValue("mocked-yaml-content"),
 }));
@@ -31,6 +54,14 @@ describe("createReleaseMetadata", () => {
 		);
 		vi.mocked(fs.mkdir).mockResolvedValue(undefined);
 		vi.mocked(fs.writeFile).mockResolvedValue(undefined);
+
+		// Reset console logs for testing
+		vi.spyOn(console, "log").mockImplementation(() => {
+			return;
+		});
+		vi.spyOn(console, "error").mockImplementation(() => {
+			return;
+		});
 	});
 
 	afterEach(() => {
@@ -87,5 +118,91 @@ describe("createReleaseMetadata", () => {
 		// The second argument to writeFile should be the YAML content
 		// We mocked yaml.stringify so can't check exact content, but we can verify it was called
 		expect(writeFileMock).toHaveBeenCalled();
+	});
+
+	it("should use password when provided", async () => {
+		// Import the mocked spawn from the child_process module
+		const childProcess = await import("node:child_process");
+		const spawnMock = vi.mocked(childProcess.spawn);
+
+		await createReleaseMetadata({
+			distributables: ["app-1.0.0.zip"],
+			secretKeyPath: "secret.key",
+			appVersion: "1.0.0",
+			password: "test-password",
+		});
+
+		// Check spawn was called twice (once for manifest, once for distributable)
+		expect(spawnMock).toHaveBeenCalledTimes(2);
+
+		// Get the first call to spawn
+		const firstCall = spawnMock.mock.results[0].value as EventEmitter &
+			BasicMockProcess;
+
+		// Verify stdin.write was called with the password
+		expect(firstCall.stdin.write).toHaveBeenCalledWith("test-password\n");
+		expect(firstCall.stdin.end).toHaveBeenCalled();
+
+		// Verify console message indicates password usage
+		expect(console.log).toHaveBeenCalledWith(
+			expect.stringContaining("Using provided password for key decryption"),
+		);
+	});
+
+	it("should allow interactive password input when no password provided", async () => {
+		// Import the mocked spawn from the child_process module
+		const childProcess = await import("node:child_process");
+		const spawnMock = vi.mocked(childProcess.spawn);
+
+		await createReleaseMetadata({
+			distributables: ["app-1.0.0.zip"],
+			secretKeyPath: "secret.key",
+			appVersion: "1.0.0",
+		});
+
+		// Check spawn was called twice (once for manifest, once for distributable)
+		expect(spawnMock).toHaveBeenCalledTimes(2);
+
+		// Verify spawn was called with correct stdio option for interactive input
+		expect(spawnMock).toHaveBeenCalledWith(
+			"minisign",
+			expect.arrayContaining(["-S", "-s", "secret.key"]),
+			expect.objectContaining({ stdio: "inherit" }),
+		);
+
+		// Verify console message indicates manual password entry might be needed
+		expect(console.log).toHaveBeenCalledWith(
+			expect.stringContaining("may need to enter password in the terminal"),
+		);
+	});
+
+	it("should handle minisign failure", async () => {
+		// Import the mocked spawn from the child_process module
+		const childProcess = await import("node:child_process");
+
+		// Mock spawn to simulate error
+		vi.mocked(childProcess.spawn).mockImplementationOnce(() => {
+			const emitter = new EventEmitter() as EventEmitter & BasicMockProcess;
+
+			// Add stdin for password tests
+			emitter.stdin = {
+				write: vi.fn(),
+				end: vi.fn(),
+			};
+
+			// Simulate error code
+			setTimeout(() => {
+				emitter.emit("close", 1);
+			}, 0);
+
+			return emitter;
+		});
+
+		await expect(
+			createReleaseMetadata({
+				distributables: ["app-1.0.0.zip"],
+				secretKeyPath: "secret.key",
+			}),
+		).rejects.toThrow("Failed to sign file with minisign");
 	});
 });
