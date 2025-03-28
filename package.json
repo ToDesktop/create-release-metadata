@@ -1,6 +1,6 @@
 {
 	"name": "@todesktop/create-release-metadata",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"description": "Create signed release metadata files for ToDesktop Installer",
 	"repository": {
 		"type": "git",
