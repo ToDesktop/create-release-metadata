@@ -4,3 +4,6 @@
 /*.key
 /*.pub
 fixtures/
+/latest-mac.yml
+/latest-mac.yml.minisig
+.DS_Store
